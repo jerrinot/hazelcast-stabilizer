@@ -3,6 +3,11 @@ package com.hazelcast.simulator.tests.map;
 import com.hazelcast.core.IMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.mapreduce.aggregation.Aggregations;
+import com.hazelcast.mapreduce.aggregation.Supplier;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.simulator.test.TestContext;
@@ -19,6 +24,7 @@ import com.hazelcast.simulator.worker.tasks.AbstractWorker;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -32,9 +38,8 @@ import static org.apache.commons.lang3.RandomUtils.nextLong;
 public class SerializationStrategyTest {
 
     private enum Operation {
-        GET_BY_KEY,
-        GET_BY_INT_INDEX,
-        GET_BY_STRING_INDEX
+        GET_BY_STRING_INDEX,
+        AGGREGATION
     }
 
     public enum Strategy {
@@ -53,10 +58,10 @@ public class SerializationStrategyTest {
     public int itemCount = 1000000;
     public int recordsPerUnique = 10000;
 
-    public double getByStringIndexProb = 1;
-    public double getByIntIndexProb = 0;
+    public double getAggregationProb = 0;
 
     private final OperationSelectorBuilder<Operation> operationSelectorBuilder = new OperationSelectorBuilder<Operation>();
+
 
     private IMap<String, DomainObject> map;
     private Set<String> uniqueStrings;
@@ -66,9 +71,8 @@ public class SerializationStrategyTest {
         map = testContext.getTargetInstance().getMap(basename + "-" + testContext.getTestId());
         uniqueStrings = testContext.getTargetInstance().getSet(basename + "-" + testContext.getTestId());
 
-        operationSelectorBuilder.addOperation(Operation.GET_BY_STRING_INDEX, getByStringIndexProb)
-                .addOperation(Operation.GET_BY_INT_INDEX, getByIntIndexProb)
-                .addDefaultOperation(Operation.GET_BY_KEY);
+        operationSelectorBuilder.addOperation(Operation.AGGREGATION, getAggregationProb)
+                .addDefaultOperation(Operation.GET_BY_STRING_INDEX);
 
     }
 
@@ -115,9 +119,11 @@ public class SerializationStrategyTest {
     private class Worker extends AbstractWorker<Operation> {
 
         private String[] localUniqueStrings;
+        private Supplier<String, DomainObject, String> supplier;
 
         public Worker() {
             super(operationSelectorBuilder);
+            supplier = new Extractor();
         }
 
         @Override
@@ -129,15 +135,15 @@ public class SerializationStrategyTest {
         @Override
         protected void timeStep(Operation operation) {
             switch (operation) {
-                case GET_BY_KEY:
-                    throw new UnsupportedOperationException("Not implemented yet");
-                case GET_BY_INT_INDEX:
-                    throw new UnsupportedOperationException("Not implemented yet");
                 case GET_BY_STRING_INDEX:
                     String string = getUniqueString();
                     Predicate predicate = Predicates.equal("stringVal", string);
                     Set<Map.Entry<String, DomainObject>> entries = map.entrySet(predicate);
                     THROTTLING_LOGGER.log(Level.INFO, "GetByStringIndex: " + entries.size() + " entries");
+                    break;
+                case AGGREGATION:
+                    Set<String> distinctValues = map.aggregate(supplier, Aggregations.<String, String, String>distinctValues());
+                    THROTTLING_LOGGER.log(Level.INFO, "There are " + distinctValues.size() + " distinct values");
                     break;
                 default:
                     throw new IllegalArgumentException("Unknown Operation: " + operation);
@@ -147,6 +153,23 @@ public class SerializationStrategyTest {
         public String getUniqueString() {
             int i = randomInt(localUniqueStrings.length);
             return localUniqueStrings[i];
+        }
+    }
+
+    private static class Extractor extends Supplier<String, DomainObject, String> implements DataSerializable {
+        @Override
+        public String apply(Map.Entry<String, DomainObject> entry) {
+            return entry.getValue().getStringVal();
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+
         }
     }
 }
