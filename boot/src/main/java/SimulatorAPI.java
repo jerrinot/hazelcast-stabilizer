@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
@@ -61,30 +63,77 @@ public class SimulatorAPI {
         provisioner.installSimulator();
 
         File workerJar = null;
+        workerJar = createWorkerJar(classes);
+
+        runCoordinator(properties, componentRegistry, testSuite, workerJar);
+    }
+
+    private static File createWorkerJar(Class...testClasses) {
+        File workerJar;
+        Set<String> existingDirectories = new HashSet<String>();
         try {
             workerJar = File.createTempFile("simulator-boot", ".jar");
             FileOutputStream baos = new FileOutputStream(workerJar);
             JarOutputStream jar = new JarOutputStream(baos);
 
-            String canonicalName = testClass.getCanonicalName();
-            String transformedName = canonicalName.replace('.', '/');
-            String resourceName = transformedName + ".class";
+            for (Class testClass : testClasses) {
+                copyResource(existingDirectories, jar, testClass);
+                Class[] declaredClasses = testClass.getDeclaredClasses();
+                for (Class declaredClass : declaredClasses) {
+                    copyResource(existingDirectories, jar, declaredClass);
+                }
 
-            int lastSlash = transformedName.lastIndexOf('/');
-            String dir = transformedName.substring(0, lastSlash+1);
-
-            jar.putNextEntry(new ZipEntry(dir));
-            jar.putNextEntry(new ZipEntry(resourceName));
-            InputStream is = testClass.getClassLoader().getResourceAsStream(resourceName);
-            byte[] bytes = IOUtils.toByteArray(is);
-            jar.write(bytes);
-            jar.closeEntry();
+            }
             jar.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        return workerJar;
+    }
 
-        runCoordinator(properties, componentRegistry, testSuite, workerJar);
+    private static void copyResource(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass) throws IOException {
+        String canonicalName = declaredClass.getName();
+        String transformedName = canonicalName.replace('.', '/');
+        String resourceName = transformedName + ".class";
+        System.out.println("Copying resource: " + resourceName);
+
+        int lastSlash = transformedName.lastIndexOf('/');
+        String dir = transformedName.substring(0, lastSlash + 1);
+        if (existingDirectories.add(dir)) {
+            jar.putNextEntry(new ZipEntry(dir));
+        }
+        jar.putNextEntry(new ZipEntry(resourceName));
+        InputStream is = declaredClass.getClassLoader().getResourceAsStream(resourceName);
+        byte[] bytes = IOUtils.toByteArray(is);
+        jar.write(bytes);
+        jar.closeEntry();
+
+        //try to copy anonymous inner classes
+        tryToCopyAnonymousInnerClasses(existingDirectories, jar, declaredClass, transformedName);
+    }
+
+    private static void tryToCopyAnonymousInnerClasses(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass, String transformedName) throws IOException {
+        String resourceName;
+        int lastSlash;
+        String dir;
+        InputStream is;
+        byte[] bytes;
+        for (int i = 1;; i++) {
+            resourceName = transformedName + "$" + i + ".class";
+            lastSlash = transformedName.lastIndexOf('/');
+            dir = transformedName.substring(0, lastSlash + 1);
+            if (existingDirectories.add(dir)) {
+                jar.putNextEntry(new ZipEntry(dir));
+            }
+            jar.putNextEntry(new ZipEntry(resourceName));
+            is = declaredClass.getClassLoader().getResourceAsStream(resourceName);
+            if (is == null) {
+                return;
+            }
+            bytes = IOUtils.toByteArray(is);
+            jar.write(bytes);
+            jar.closeEntry();
+        }
     }
 
     private static void runCoordinator(SimulatorProperties properties, ComponentRegistry componentRegistry, TestSuite testSuite, File workerJar) {
