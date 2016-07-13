@@ -155,8 +155,6 @@ public class SimulatorAPI {
         String canonicalName = declaredClass.getName();
         String transformedName = canonicalName.replace('.', '/');
         String resourceName = transformedName + ".class";
-        System.out.println("Copying resource: " + resourceName);
-
         int lastSlash = transformedName.lastIndexOf('/');
         String dir = transformedName.substring(0, lastSlash + 1);
         if (existingDirectories.add(dir)) {
@@ -169,7 +167,10 @@ public class SimulatorAPI {
         jar.closeEntry();
 
         // try to copy anonymous inner classes
-//        tryToCopyAnonymousInnerClasses(existingDirectories, jar, declaredClass, transformedName);
+        String javaVersion = System.getProperty("java.version");
+        if (javaVersion.startsWith("1.8.")) {
+            tryToCopyAnonymousInnerClasses(existingDirectories, jar, declaredClass, transformedName);
+        }
     }
 
     private static void tryToCopyAnonymousInnerClasses(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass,
