@@ -1,6 +1,7 @@
 package com.hazelcast.simulator.boot;
 
 public class TestCaseBuilder {
+
     private Class[] classes;
     private int clientCount = 0;
     private int memberCount = 1;
@@ -10,13 +11,8 @@ public class TestCaseBuilder {
         return new TestCaseBuilder();
     }
 
-    public TestCaseBuilder addClasses(Class...classes) {
-        this.classes = classes;
-        return this;
-    }
-
-    public TestCaseBuilder clientCount(int clientCount) {
-        this.clientCount = clientCount;
+    public TestCaseBuilder boxCount(int boxCount) {
+        this.boxCount = boxCount;
         return this;
     }
 
@@ -25,12 +21,17 @@ public class TestCaseBuilder {
         return this;
     }
 
-    public TestCaseBuilder boxCount(int boxCount) {
-        this.boxCount = boxCount;
+    public TestCaseBuilder clientCount(int clientCount) {
+        this.clientCount = clientCount;
+        return this;
+    }
+
+    public TestCaseBuilder addClasses(Class... classes) {
+        this.classes = classes;
         return this;
     }
 
     public void run() {
-        SimulatorAPI.runTest(classes);
+        SimulatorAPI.runTest(boxCount, memberCount, clientCount, classes);
     }
 }

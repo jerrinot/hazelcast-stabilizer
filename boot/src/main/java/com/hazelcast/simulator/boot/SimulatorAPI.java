@@ -53,7 +53,7 @@ public class SimulatorAPI {
             SIMULATOR_VERSION, SIMULATOR_VERSION);
     private static final String TMP_ZIP_FILENAME = TARGET_DIRECTORY + "dist.zip";
 
-    public static void runTest(Class... classes) {
+    public static void runTest(int boxCount, int memberCount, int clientCount, Class... classes) {
         try {
             File targetDirectory = ensureExistingDirectory(TARGET_DIRECTORY);
 
@@ -88,8 +88,19 @@ public class SimulatorAPI {
         String hazelcastVersionSpec = properties.getHazelcastVersionSpec();
         HazelcastJARs hazelcastJARs = HazelcastJARs.newInstance(bash, properties, singleton(hazelcastVersionSpec));
         boolean enterpriseEnabled = false;
+
         ComponentRegistry componentRegistry = new ComponentRegistry();
-        componentRegistry.addAgent("127.0.0.1", "127.0.0.1");
+        if (boxCount == 0) {
+            componentRegistry.addAgent("127.0.0.1", "127.0.0.1");
+        }
+
+        Provisioner provisioner = new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled,
+                componentRegistry);
+        if (boxCount > 0) {
+            //provisioner.scale(1);
+        }
+        provisioner.installSimulator();
+
         TestSuite testSuite = new TestSuite();
         TestCase testCase = new TestCase("testId");
         Class testClass = classes[0];
@@ -97,10 +108,6 @@ public class SimulatorAPI {
         testSuite.addTest(testCase);
         testSuite.setDurationSeconds(20);
         componentRegistry.addTests(testSuite);
-
-        Provisioner provisioner = new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled, componentRegistry);
-        //provisioner.scale(1);
-        provisioner.installSimulator();
 
         File workerJar = createWorkerJar(classes);
 
