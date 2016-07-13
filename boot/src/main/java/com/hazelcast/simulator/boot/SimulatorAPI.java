@@ -1,6 +1,5 @@
 package com.hazelcast.simulator.boot;
 
-import com.hazelcast.simulator.cluster.WorkerConfigurationConverter;
 import com.hazelcast.simulator.common.SimulatorProperties;
 import com.hazelcast.simulator.coordinator.ClusterLayoutParameters;
 import com.hazelcast.simulator.coordinator.Coordinator;
@@ -235,11 +234,8 @@ public class SimulatorAPI {
                 workerScript,
                 monitorPerformance);
 
-        WorkerConfigurationConverter workerConfigurationConverter = new WorkerConfigurationConverter(defaultHzPort,
-                licenseKey, workerParameters,
-                properties, componentRegistry);
         int dedicatedMemberMachineCount = 0;
-        ClusterLayoutParameters clusterLayoutParameters = new ClusterLayoutParameters(null, workerConfigurationConverter,
+        ClusterLayoutParameters clusterLayoutParameters = new ClusterLayoutParameters(null, null,
                 memberWorkerCount, clientWorkerCount, dedicatedMemberMachineCount, componentRegistry.agentCount());
         Coordinator coordinator = new Coordinator(testSuite, componentRegistry, coordinatorParameters, workerParameters,
                 clusterLayoutParameters);
