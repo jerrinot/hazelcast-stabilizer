@@ -1,11 +1,14 @@
 package com.hazelcast.simulator.boot;
 
+import java.util.concurrent.TimeUnit;
+
 public class TestCaseBuilder {
 
     private Class[] classes;
     private int clientCount = 0;
     private int memberCount = 1;
     private int boxCount = 0;
+    private int durationSeconds = 10;
 
     public static TestCaseBuilder testCase() {
         return new TestCaseBuilder();
@@ -31,7 +34,12 @@ public class TestCaseBuilder {
         return this;
     }
 
+    public TestCaseBuilder duration(int duration, TimeUnit timeUnit) {
+        this.durationSeconds = (int) timeUnit.toSeconds(duration);
+        return this;
+    }
+
     public void run() {
-        SimulatorAPI.runTest(boxCount, memberCount, clientCount, classes);
+        SimulatorAPI.runTest(boxCount, memberCount, clientCount, durationSeconds, classes);
     }
 }

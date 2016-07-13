@@ -56,7 +56,7 @@ public class SimulatorAPI {
             SIMULATOR_VERSION, SIMULATOR_VERSION);
     private static final String TMP_ZIP_FILENAME = TARGET_DIRECTORY + "dist.zip";
 
-    public static void runTest(int boxCount, int memberCount, int clientCount, Class... classes) {
+    public static void runTest(int boxCount, int memberCount, int clientCount, int durationSeconds, Class... classes) {
         try {
             File targetDirectory = ensureExistingDirectory(TARGET_DIRECTORY);
 
@@ -120,7 +120,7 @@ public class SimulatorAPI {
         Class testClass = classes[0];
         testCase.setProperty("class", testClass.getName());
         testSuite.addTest(testCase);
-        testSuite.setDurationSeconds(20);
+        testSuite.setDurationSeconds(durationSeconds);
         componentRegistry.addTests(testSuite);
 
         File workerJar = createWorkerJar(classes);
