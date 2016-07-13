@@ -48,6 +48,7 @@ import static com.hazelcast.simulator.utils.SimulatorUtils.loadComponentRegister
 import static java.lang.String.format;
 import static java.util.Collections.singleton;
 
+@SuppressWarnings("ConstantConditions")
 public class SimulatorAPI {
 
     private static final boolean IS_LOCAL_DIST_ZIP = true;

@@ -2,6 +2,7 @@ package com.hazelcast.simulator.boot;
 
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("unused")
 public class TestCaseBuilder {
 
     private Class[] classes;
