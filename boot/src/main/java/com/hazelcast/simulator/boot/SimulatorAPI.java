@@ -36,7 +36,7 @@ import static com.hazelcast.simulator.test.TestPhase.GLOBAL_WARMUP;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.PROVIDER_EC2;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.PROVIDER_STATIC;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.isCloudProvider;
-import static com.hazelcast.simulator.utils.CloudProviderUtils.isEC2;
+import static com.hazelcast.simulator.utils.CloudProviderUtils.isStatic;
 import static com.hazelcast.simulator.utils.CommonUtils.closeQuietly;
 import static com.hazelcast.simulator.utils.FileUtils.ensureExistingDirectory;
 import static com.hazelcast.simulator.utils.FileUtils.newFile;
@@ -97,20 +97,21 @@ public class SimulatorAPI {
 
         File agentsFile = newFile("agents.txt");
         System.out.println("Using agents file: " + agentsFile.getAbsolutePath());
-        ComponentRegistry componentRegistry = new ComponentRegistry();
-        if (isEC2(properties)) {
-            componentRegistry = loadComponentRegister(agentsFile);
-        } else {
+        ComponentRegistry componentRegistry;
+        if (isStatic(properties)) {
+            componentRegistry = new ComponentRegistry();
             componentRegistry.addAgent("localhost", "localhost");
+        } else {
+            componentRegistry = loadComponentRegister(agentsFile);
         }
 
         Provisioner provisioner = new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled,
                 componentRegistry);
-        if (isEC2(properties)) {
+        if (isStatic(properties)) {
+            provisioner.installSimulator();
+        } else {
             provisioner.scale(boxCount);
             componentRegistry = loadComponentRegister(agentsFile);
-        } else {
-            provisioner.installSimulator();
         }
         provisioner.shutdown();
 
