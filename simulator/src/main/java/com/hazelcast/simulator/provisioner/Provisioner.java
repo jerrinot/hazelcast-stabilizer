@@ -59,7 +59,6 @@ import static com.hazelcast.simulator.utils.FileUtils.rename;
 import static com.hazelcast.simulator.utils.FormatUtils.HORIZONTAL_RULER;
 import static com.hazelcast.simulator.utils.FormatUtils.NEW_LINE;
 import static com.hazelcast.simulator.utils.HarakiriMonitorUtils.getStartHarakiriMonitorCommandOrNull;
-import static com.hazelcast.simulator.utils.SimulatorUtils.loadComponentRegister;
 import static java.lang.String.format;
 
 public class Provisioner {
@@ -290,7 +289,7 @@ public class Provisioner {
         scaleDown(Integer.MAX_VALUE);
     }
 
-    void shutdown() {
+    public void shutdown() {
         echo("Shutting down Provisioner...");
 
         // shutdown thread pool

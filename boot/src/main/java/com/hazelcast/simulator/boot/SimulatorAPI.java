@@ -34,11 +34,16 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static com.hazelcast.simulator.test.TestPhase.GLOBAL_WARMUP;
+import static com.hazelcast.simulator.utils.CloudProviderUtils.PROVIDER_EC2;
+import static com.hazelcast.simulator.utils.CloudProviderUtils.PROVIDER_STATIC;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.isCloudProvider;
+import static com.hazelcast.simulator.utils.CloudProviderUtils.isEC2;
+import static com.hazelcast.simulator.utils.CloudProviderUtils.isStatic;
 import static com.hazelcast.simulator.utils.CommonUtils.closeQuietly;
 import static com.hazelcast.simulator.utils.FileUtils.ensureExistingDirectory;
 import static com.hazelcast.simulator.utils.FileUtils.newFile;
 import static com.hazelcast.simulator.utils.NativeUtils.execute;
+import static com.hazelcast.simulator.utils.SimulatorUtils.loadComponentRegister;
 import static java.lang.String.format;
 import static java.util.Collections.singleton;
 
@@ -80,8 +85,11 @@ public class SimulatorAPI {
         System.out.println("Simulator Home will be: " + simulatorHome);
 
         SimulatorProperties properties = new SimulatorProperties();
-        properties.set("CLOUD_PROVIDER", "static");
-        //properties.set("CLOUD_PROVIDER", "ec2");
+        if (boxCount == 0) {
+            properties.set("CLOUD_PROVIDER", PROVIDER_STATIC);
+        } else {
+            properties.set("CLOUD_PROVIDER", PROVIDER_EC2);
+        }
 
         ComputeService computeService = (isCloudProvider(properties) ? new ComputeServiceBuilder(properties).build() : null);
         Bash bash = new Bash(properties);
@@ -90,16 +98,19 @@ public class SimulatorAPI {
         boolean enterpriseEnabled = false;
 
         ComponentRegistry componentRegistry = new ComponentRegistry();
-        if (boxCount == 0) {
+        if (isStatic(properties)) {
             componentRegistry.addAgent("127.0.0.1", "127.0.0.1");
         }
 
         Provisioner provisioner = new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled,
                 componentRegistry);
-        if (boxCount > 0) {
-            //provisioner.scale(1);
+        if (isEC2(properties)) {
+            provisioner.scale(boxCount);
+            componentRegistry = loadComponentRegister(newFile("agents.txt"));
+        } else {
+            provisioner.installSimulator();
         }
-        provisioner.installSimulator();
+        provisioner.shutdown();
 
         TestSuite testSuite = new TestSuite();
         TestCase testCase = new TestCase("testId");
