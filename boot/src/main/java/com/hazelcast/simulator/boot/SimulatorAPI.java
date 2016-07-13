@@ -231,7 +231,6 @@ public class SimulatorAPI {
                 workerScript,
                 monitorPerformance);
 
-        String clusterConfiguration = null;
         int defaultHzPort = 5701;
         String licenseKey = "";
 
@@ -239,87 +238,87 @@ public class SimulatorAPI {
                 licenseKey, workerParameters,
                 properties, componentRegistry);
         int dedicatedMemberMachineCount = 0;
-        int agentCount = 1;
-        ClusterLayoutParameters clusterLayoutParameters = new ClusterLayoutParameters(clusterConfiguration,
-                workerConfigurationConverter, memberWorkerCount, clientWorkerCount, dedicatedMemberMachineCount, agentCount);
-        Coordinator coordinator = new Coordinator(testSuite, componentRegistry, coordinatorParameters, workerParameters, clusterLayoutParameters);
+        ClusterLayoutParameters clusterLayoutParameters = new ClusterLayoutParameters(null, workerConfigurationConverter,
+                memberWorkerCount, clientWorkerCount, dedicatedMemberMachineCount, componentRegistry.agentCount());
+        Coordinator coordinator = new Coordinator(testSuite, componentRegistry, coordinatorParameters, workerParameters,
+                clusterLayoutParameters);
 
         coordinator.run();
     }
 
     private static String createClientHazelcastConfig() {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                    "<hazelcast-client\n" +
-                    "        xsi:schemaLocation=\"http://www.hazelcast.com/schema/client-config\n" +
-                    "            http://www.hazelcast.com/schema/config/hazelcast-client-config-3.6.xsd\"\n" +
-                    "        xmlns=\"http://www.hazelcast.com/schema/client-config\"\n" +
-                    "        xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                    "\n" +
-                    "    <group>\n" +
-                    "        <name>workers</name>\n" +
-                    "    </group>\n" +
-                    "\n" +
-                    "    <network>\n" +
-                    "        <cluster-members>\n" +
-                    "            <!--MEMBERS-->\n" +
-                    "        </cluster-members>\n" +
-                    "    </network>\n" +
-                    "\n" +
-                    "    <!--LICENSE-KEY-->\n" +
-                    "\n" +
-                    "    <serialization>\n" +
-                    "        <data-serializable-factories>\n" +
-                    "            <data-serializable-factory factory-id=\"4000\">\n" +
-                    "                com.hazelcast.simulator.tests.map.domain.IdentifiedDataSerializableObjectFactory\n" +
-                    "            </data-serializable-factory>\n" +
-                    "        </data-serializable-factories>\n" +
-                    "\n" +
-                    "        <portable-version>1</portable-version>\n" +
-                    "        <portable-factories>\n" +
-                    "            <portable-factory factory-id=\"10000001\">com.hazelcast.simulator.tests.map.domain.PortableObjectFactory</portable-factory>\n" +
-                    "            <portable-factory factory-id=\"10000002\">com.hazelcast.simulator.tests.map.helpers.ComplexDomainObjectPortableFactory</portable-factory>\n" +
-                    "        </portable-factories>\n" +
-                    "    </serialization>\n" +
-                    "</hazelcast-client>\n";
+                "<hazelcast-client\n" +
+                "        xsi:schemaLocation=\"http://www.hazelcast.com/schema/client-config\n" +
+                "            http://www.hazelcast.com/schema/config/hazelcast-client-config-3.6.xsd\"\n" +
+                "        xmlns=\"http://www.hazelcast.com/schema/client-config\"\n" +
+                "        xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
+                "\n" +
+                "    <group>\n" +
+                "        <name>workers</name>\n" +
+                "    </group>\n" +
+                "\n" +
+                "    <network>\n" +
+                "        <cluster-members>\n" +
+                "            <!--MEMBERS-->\n" +
+                "        </cluster-members>\n" +
+                "    </network>\n" +
+                "\n" +
+                "    <!--LICENSE-KEY-->\n" +
+                "\n" +
+                "    <serialization>\n" +
+                "        <data-serializable-factories>\n" +
+                "            <data-serializable-factory factory-id=\"4000\">\n" +
+                "                com.hazelcast.simulator.tests.map.domain.IdentifiedDataSerializableObjectFactory\n" +
+                "            </data-serializable-factory>\n" +
+                "        </data-serializable-factories>\n" +
+                "\n" +
+                "        <portable-version>1</portable-version>\n" +
+                "        <portable-factories>\n" +
+                "            <portable-factory factory-id=\"10000001\">com.hazelcast.simulator.tests.map.domain.PortableObjectFactory</portable-factory>\n" +
+                "            <portable-factory factory-id=\"10000002\">com.hazelcast.simulator.tests.map.helpers.ComplexDomainObjectPortableFactory</portable-factory>\n" +
+                "        </portable-factories>\n" +
+                "    </serialization>\n" +
+                "</hazelcast-client>\n";
     }
 
     private static String createLog4JConfig() {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                    "<!DOCTYPE log4j:configuration SYSTEM \"log4j.dtd\" >\n" +
-                    "<log4j:configuration>\n" +
-                    "    <!--\n" +
-                    "        We configure Log4j with RollingFileAppender to prevent \"out of disk\" errors on the test machines.\n" +
-                    "        If you need full reports to debug a special test situation you can switch to the FileAppender config.\n" +
-                    "\n" +
-                    "        Just place this file into your working directory and adjust the configuration as you need it.\n" +
-                    "        It will automatically be used if it exists.\n" +
-                    "    -->\n" +
-                    "\n" +
-                    "    <appender name=\"file\" class=\"org.apache.log4j.RollingFileAppender\">\n" +
-                    "        <param name=\"File\" value=\"worker.log\"/>\n" +
-                    "        <param name=\"MaxFileSize\" value=\"1gb\"/>\n" +
-                    "        <param name=\"MaxBackupIndex\" value=\"5\"/>\n" +
-                    "        <param name=\"Threshold\" value=\"INFO\"/>\n" +
-                    "        <layout class=\"org.apache.log4j.PatternLayout\">\n" +
-                    "            <param name=\"ConversionPattern\" value=\"%-5p %d [%t] %c: %m%n\"/>\n" +
-                    "        </layout>\n" +
-                    "    </appender>\n" +
-                    "\n" +
-                    "    <!--\n" +
-                    "    <appender name=\"file\" class=\"org.apache.log4j.FileAppender\">\n" +
-                    "        <param name=\"File\" value=\"worker.log\"/>\n" +
-                    "        <param name=\"Threshold\" value=\"INFO\"/>\n" +
-                    "        <layout class=\"org.apache.log4j.PatternLayout\">\n" +
-                    "            <param name=\"ConversionPattern\" value=\"%-5p %d [%t] %c: %m%n\"/>\n" +
-                    "        </layout>\n" +
-                    "    </appender>\n" +
-                    "    -->\n" +
-                    "\n" +
-                    "    <root>\n" +
-                    "        <priority value=\"debug\"/>\n" +
-                    "        <appender-ref ref=\"file\"/>\n" +
-                    "    </root>\n" +
-                    "</log4j:configuration>\n";
+                "<!DOCTYPE log4j:configuration SYSTEM \"log4j.dtd\" >\n" +
+                "<log4j:configuration>\n" +
+                "    <!--\n" +
+                "        We configure Log4j with RollingFileAppender to prevent \"out of disk\" errors on the test machines.\n" +
+                "        If you need full reports to debug a special test situation you can switch to the FileAppender config.\n" +
+                "\n" +
+                "        Just place this file into your working directory and adjust the configuration as you need it.\n" +
+                "        It will automatically be used if it exists.\n" +
+                "    -->\n" +
+                "\n" +
+                "    <appender name=\"file\" class=\"org.apache.log4j.RollingFileAppender\">\n" +
+                "        <param name=\"File\" value=\"worker.log\"/>\n" +
+                "        <param name=\"MaxFileSize\" value=\"1gb\"/>\n" +
+                "        <param name=\"MaxBackupIndex\" value=\"5\"/>\n" +
+                "        <param name=\"Threshold\" value=\"INFO\"/>\n" +
+                "        <layout class=\"org.apache.log4j.PatternLayout\">\n" +
+                "            <param name=\"ConversionPattern\" value=\"%-5p %d [%t] %c: %m%n\"/>\n" +
+                "        </layout>\n" +
+                "    </appender>\n" +
+                "\n" +
+                "    <!--\n" +
+                "    <appender name=\"file\" class=\"org.apache.log4j.FileAppender\">\n" +
+                "        <param name=\"File\" value=\"worker.log\"/>\n" +
+                "        <param name=\"Threshold\" value=\"INFO\"/>\n" +
+                "        <layout class=\"org.apache.log4j.PatternLayout\">\n" +
+                "            <param name=\"ConversionPattern\" value=\"%-5p %d [%t] %c: %m%n\"/>\n" +
+                "        </layout>\n" +
+                "    </appender>\n" +
+                "    -->\n" +
+                "\n" +
+                "    <root>\n" +
+                "        <priority value=\"debug\"/>\n" +
+                "        <appender-ref ref=\"file\"/>\n" +
+                "    </root>\n" +
+                "</log4j:configuration>\n";
     }
 
     private static void downloadFile(String url, String targetFilename) {
