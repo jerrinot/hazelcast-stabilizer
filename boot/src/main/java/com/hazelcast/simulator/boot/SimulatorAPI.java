@@ -1,3 +1,5 @@
+package com.hazelcast.simulator.boot;
+
 import com.hazelcast.simulator.cluster.WorkerConfigurationConverter;
 import com.hazelcast.simulator.common.SimulatorProperties;
 import com.hazelcast.simulator.coordinator.ClusterLayoutParameters;
@@ -199,7 +201,7 @@ public class SimulatorAPI {
         String clientHzConfig = "";
         String log4jConfig = "";
         String workerScript = createRunScript();
-        boolean monitorPerformance = false;
+        boolean monitorPerformance = true;
         WorkerParameters workerParameters = new WorkerParameters(properties,
                 autoCreateHzInstance,
                 workerStartupTimeout,
