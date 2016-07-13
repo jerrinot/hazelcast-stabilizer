@@ -329,6 +329,10 @@ public final class FileUtils {
     }
 
     public static File getSimulatorHome() {
+        String homeOverride = System.getProperty("SIMULATOR_HOME_OVERRIDE");
+        if (homeOverride != null && !homeOverride.isEmpty()) {
+            return newFile(homeOverride);
+        }
         String home = System.getenv("SIMULATOR_HOME");
         return new File((home != null) ? home : System.getProperty("user.dir"));
     }
