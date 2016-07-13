@@ -1,7 +1,6 @@
 package com.hazelcast.simulator.boot;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.simulator.cluster.WorkerConfigurationConverter;
 import com.hazelcast.simulator.common.SimulatorProperties;
 import com.hazelcast.simulator.coordinator.ClusterLayoutParameters;
 import com.hazelcast.simulator.coordinator.Coordinator;
@@ -20,7 +19,12 @@ import com.hazelcast.simulator.utils.jars.HazelcastJARs;
 import org.apache.commons.io.IOUtils;
 import org.jclouds.compute.ComputeService;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
