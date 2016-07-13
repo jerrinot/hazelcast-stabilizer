@@ -1,4 +1,3 @@
-import com.hazelcast.nio.IOUtil;
 import com.hazelcast.simulator.cluster.WorkerConfigurationConverter;
 import com.hazelcast.simulator.common.SimulatorProperties;
 import com.hazelcast.simulator.coordinator.ClusterLayoutParameters;
@@ -18,30 +17,69 @@ import com.hazelcast.simulator.utils.jars.HazelcastJARs;
 import org.apache.commons.io.IOUtils;
 import org.jclouds.compute.ComputeService;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import static com.hazelcast.simulator.test.TestPhase.GLOBAL_WARMUP;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.isCloudProvider;
+import static com.hazelcast.simulator.utils.CommonUtils.closeQuietly;
+import static com.hazelcast.simulator.utils.FileUtils.ensureExistingDirectory;
+import static com.hazelcast.simulator.utils.FileUtils.newFile;
+import static com.hazelcast.simulator.utils.NativeUtils.execute;
+import static java.lang.String.format;
 import static java.util.Collections.singleton;
 
 public class SimulatorAPI {
-    public static void runTest(Class...classes) {
-        System.setProperty("SIMULATOR_HOME_OVERRIDE", "/tmp/simulator-home-override/hazelcast-simulator-0.8-SNAPSHOT/");
+
+    private static final boolean IS_LOCAL_DIST_ZIP = true;
+    private static final String SIMULATOR_VERSION = "0.8-SNAPSHOT";
+    private static final String TARGET_DIRECTORY = "/tmp";
+
+    private static final String ZIP_URL
+            = format("https://repo1.maven.org/maven2/com/hazelcast/simulator/dist/%s/dist-%s.zip",
+            SIMULATOR_VERSION, SIMULATOR_VERSION);
+    private static final String TMP_ZIP_FILENAME = TARGET_DIRECTORY + "dist.zip";
+
+    public static void runTest(Class... classes) {
+        try {
+            File targetDirectory = ensureExistingDirectory(TARGET_DIRECTORY);
+
+            String tmpZipFilename;
+            if (IS_LOCAL_DIST_ZIP) {
+                tmpZipFilename = format("~/.m2/repository/com/hazelcast/simulator/dist/%s/dist-%s.zip",
+                        SIMULATOR_VERSION, SIMULATOR_VERSION);
+            } else {
+                tmpZipFilename = TMP_ZIP_FILENAME;
+                downloadFile(ZIP_URL, TMP_ZIP_FILENAME);
+            }
+
+            unzip(tmpZipFilename, targetDirectory);
+            makeScriptFilesExecutable();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        System.setProperty("SIMULATOR_HOME_OVERRIDE", TARGET_DIRECTORY + "/hazelcast-simulator-" + SIMULATOR_VERSION);
         File simulatorHome = FileUtils.getSimulatorHome();
         File confDir = new File(simulatorHome, "conf");
-        FileUtils.ensureExistingDirectory(confDir);
+        ensureExistingDirectory(confDir);
+
+        System.out.println("Simulator Home will be: " + simulatorHome);
 
         SimulatorProperties properties = new SimulatorProperties();
         properties.set("CLOUD_PROVIDER", "static");
-//        properties.set("CLOUD_PROVIDER", "ec2");
+        //properties.set("CLOUD_PROVIDER", "ec2");
 
         ComputeService computeService = (isCloudProvider(properties) ? new ComputeServiceBuilder(properties).build() : null);
         Bash bash = new Bash(properties);
@@ -59,16 +97,15 @@ public class SimulatorAPI {
         componentRegistry.addTests(testSuite);
 
         Provisioner provisioner = new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled, componentRegistry);
-//        provisioner.scale(1);
+        //provisioner.scale(1);
         provisioner.installSimulator();
 
-        File workerJar = null;
-        workerJar = createWorkerJar(classes);
+        File workerJar = createWorkerJar(classes);
 
         runCoordinator(properties, componentRegistry, testSuite, workerJar);
     }
 
-    private static File createWorkerJar(Class...testClasses) {
+    private static File createWorkerJar(Class... testClasses) {
         File workerJar;
         Set<String> existingDirectories = new HashSet<String>();
         try {
@@ -108,17 +145,18 @@ public class SimulatorAPI {
         jar.write(bytes);
         jar.closeEntry();
 
-        //try to copy anonymous inner classes
+        // try to copy anonymous inner classes
         tryToCopyAnonymousInnerClasses(existingDirectories, jar, declaredClass, transformedName);
     }
 
-    private static void tryToCopyAnonymousInnerClasses(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass, String transformedName) throws IOException {
+    private static void tryToCopyAnonymousInnerClasses(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass,
+                                                       String transformedName) throws IOException {
         String resourceName;
         int lastSlash;
         String dir;
         InputStream is;
         byte[] bytes;
-        for (int i = 1;; i++) {
+        for (int i = 1; ; i++) {
             resourceName = transformedName + "$" + i + ".class";
             lastSlash = transformedName.lastIndexOf('/');
             dir = transformedName.substring(0, lastSlash + 1);
@@ -136,7 +174,8 @@ public class SimulatorAPI {
         }
     }
 
-    private static void runCoordinator(SimulatorProperties properties, ComponentRegistry componentRegistry, TestSuite testSuite, File workerJar) {
+    private static void runCoordinator(SimulatorProperties properties, ComponentRegistry componentRegistry, TestSuite testSuite,
+                                       File workerJar) {
         String workerClassPath = workerJar.getAbsolutePath();
         boolean uploadHazelcastJARs = true;
         boolean enterpriseEnabled = false;
@@ -150,7 +189,6 @@ public class SimulatorAPI {
         CoordinatorParameters coordinatorParameters = new CoordinatorParameters(properties, workerClassPath, uploadHazelcastJARs,
                 enterpriseEnabled, verifyEnabled, parallel, refreshJvm,
                 targetType, targetCount, lastTestPhaseToSync, workerVmStartupDelayMs);
-
 
         boolean autoCreateHzInstance = true;
         int workerStartupTimeout = 5000;
@@ -173,7 +211,6 @@ public class SimulatorAPI {
                 workerScript,
                 monitorPerformance);
 
-
         String clusterConfiguration = null;
         int defaultHzPort = 5701;
         String licenseKey = "";
@@ -186,10 +223,72 @@ public class SimulatorAPI {
         int dedicatedMemberMachineCount = 0;
         int agentCount = 1;
         ClusterLayoutParameters clusterLayoutParameters = new ClusterLayoutParameters(clusterConfiguration,
-                workerConfigurationConverter,  memberWorkerCount, clientWorkerCount, dedicatedMemberMachineCount, agentCount);
+                workerConfigurationConverter, memberWorkerCount, clientWorkerCount, dedicatedMemberMachineCount, agentCount);
         Coordinator coordinator = new Coordinator(testSuite, componentRegistry, coordinatorParameters, workerParameters, clusterLayoutParameters);
 
         coordinator.run();
+    }
+
+    private static void downloadFile(String url, String targetFilename) {
+        if (!new File(TMP_ZIP_FILENAME).exists()) {
+            FileOutputStream fos = null;
+            try {
+                ReadableByteChannel rbc = Channels.newChannel(new URL(url).openStream());
+                fos = new FileOutputStream(targetFilename);
+                fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+            } catch (Exception e) {
+                throw new RuntimeException("Could not download: " + url);
+            } finally {
+                closeQuietly(fos);
+            }
+        }
+    }
+
+    private static void unzip(String zipFile, File folder) {
+        byte[] buffer = new byte[1024];
+        File file = newFile(zipFile);
+        ZipInputStream zis = null;
+        try {
+            zis = new ZipInputStream(new FileInputStream(file));
+            ZipEntry ze = zis.getNextEntry();
+
+            FileOutputStream fos = null;
+            while (ze != null) {
+                try {
+                    String fileName = ze.getName();
+                    File newFile = new File(folder, fileName);
+
+                    // create all non exists folders else you will hit FileNotFoundException for compressed folder
+                    ensureExistingDirectory(newFile.getParent());
+
+                    if (ze.isDirectory()) {
+                        ensureExistingDirectory(newFile);
+                    } else {
+                        fos = new FileOutputStream(newFile);
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                } finally {
+                    closeQuietly(fos);
+                }
+                ze = zis.getNextEntry();
+            }
+
+            zis.closeEntry();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            closeQuietly(zis);
+        }
+    }
+
+    private static void makeScriptFilesExecutable() {
+        String chmodCommand = format("chmod +x %s%shazelcast-simulator-%s%sbin%s",
+                TARGET_DIRECTORY, File.separator, SIMULATOR_VERSION, File.separator, File.separator);
+        execute(chmodCommand + ".*");
+        execute(chmodCommand + "*");
     }
 
     private static String createRunScript() {
@@ -503,5 +602,4 @@ public class SimulatorAPI {
                 "    </cache>\n" +
                 "</hazelcast>\n";
     }
-
 }
