@@ -86,12 +86,12 @@ public class Provisioner {
     private final File initScriptFile;
 
     public Provisioner(SimulatorProperties properties, ComputeService computeService, Bash bash, HazelcastJARs hazelcastJARs,
-                       boolean enterpriseEnabled) {
-        this(properties, computeService, bash, hazelcastJARs, enterpriseEnabled, MACHINE_WARMUP_WAIT_SECONDS);
+                       boolean enterpriseEnabled, ComponentRegistry componentRegistry) {
+        this(properties, computeService, bash, hazelcastJARs, enterpriseEnabled, componentRegistry, MACHINE_WARMUP_WAIT_SECONDS);
     }
 
     public Provisioner(SimulatorProperties properties, ComputeService computeService, Bash bash, HazelcastJARs hazelcastJARs,
-                       boolean enterpriseEnabled, int machineWarmupSeconds) {
+                       boolean enterpriseEnabled, ComponentRegistry componentRegistry, int machineWarmupSeconds) {
         this.properties = properties;
         this.computeService = computeService;
         this.bash = bash;
@@ -99,7 +99,7 @@ public class Provisioner {
 
         this.machineWarmupSeconds = machineWarmupSeconds;
 
-        this.componentRegistry = loadComponentRegister(agentsFile, false);
+        this.componentRegistry = componentRegistry;
         this.initScriptFile = getInitScriptFile(SIMULATOR_HOME);
 
         if (hazelcastJARs != null) {
@@ -121,7 +121,7 @@ public class Provisioner {
         return componentRegistry;
     }
 
-    void scale(int size) {
+    public void scale(int size) {
         ensureIsCloudProviderSetup(properties, "scale");
 
         int agentSize = componentRegistry.agentCount();
@@ -137,7 +137,7 @@ public class Provisioner {
         }
     }
 
-    void installJava() {
+    public void installJava() {
         ensureIsRemoteSetup(properties, "installJava");
 
         long started = System.nanoTime();

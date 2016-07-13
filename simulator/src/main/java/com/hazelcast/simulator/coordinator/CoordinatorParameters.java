@@ -22,7 +22,7 @@ import com.hazelcast.simulator.test.TestPhase;
 /**
  * Parameters for Simulator Coordinator.
  */
-class CoordinatorParameters {
+public class CoordinatorParameters {
 
     private final SimulatorProperties simulatorProperties;
     private final String workerClassPath;
@@ -40,7 +40,7 @@ class CoordinatorParameters {
     private final int workerVmStartupDelayMs;
 
     @SuppressWarnings("checkstyle:parameternumber")
-    CoordinatorParameters(SimulatorProperties properties, String workerClassPath, boolean uploadHazelcastJARs,
+    public CoordinatorParameters(SimulatorProperties properties, String workerClassPath, boolean uploadHazelcastJARs,
                           boolean enterpriseEnabled, boolean verifyEnabled, boolean parallel, boolean refreshJvm,
                           TargetType targetType, int targetCount, TestPhase lastTestPhaseToSync, int workerVmStartupDelayMs) {
         this.simulatorProperties = properties;
