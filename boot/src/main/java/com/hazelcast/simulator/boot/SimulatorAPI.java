@@ -26,14 +26,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
+import static com.hazelcast.simulator.boot.SimulatorBootUtils.downloadFile;
+import static com.hazelcast.simulator.boot.SimulatorBootUtils.unzip;
 import static com.hazelcast.simulator.coordinator.WorkerParameters.initClientHzConfig;
 import static com.hazelcast.simulator.coordinator.WorkerParameters.initMemberHzConfig;
 import static com.hazelcast.simulator.test.TestPhase.GLOBAL_WARMUP;
@@ -70,7 +69,9 @@ public class SimulatorAPI {
                         SIMULATOR_VERSION, SIMULATOR_VERSION);
             } else {
                 tmpZipFilename = TMP_ZIP_FILENAME;
-                downloadFile(ZIP_URL, TMP_ZIP_FILENAME);
+                if (!new File(SimulatorAPI.TMP_ZIP_FILENAME).exists()) {
+                    downloadFile(ZIP_URL, TMP_ZIP_FILENAME);
+                }
             }
 
             unzip(tmpZipFilename, targetDirectory);
@@ -250,6 +251,13 @@ public class SimulatorAPI {
         coordinator.run();
     }
 
+    private static void makeScriptFilesExecutable() {
+        String chmodCommand = format("chmod +x %s%shazelcast-simulator-%s%sbin%s",
+                TARGET_DIRECTORY, File.separator, SIMULATOR_VERSION, File.separator, File.separator);
+        execute(chmodCommand + ".*");
+        execute(chmodCommand + "*");
+    }
+
     private static String createClientHazelcastConfig() {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<hazelcast-client\n" +
@@ -323,68 +331,6 @@ public class SimulatorAPI {
                 "        <appender-ref ref=\"file\"/>\n" +
                 "    </root>\n" +
                 "</log4j:configuration>\n";
-    }
-
-    private static void downloadFile(String url, String targetFilename) {
-        if (!new File(TMP_ZIP_FILENAME).exists()) {
-            FileOutputStream fos = null;
-            try {
-                ReadableByteChannel rbc = Channels.newChannel(new URL(url).openStream());
-                fos = new FileOutputStream(targetFilename);
-                fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-            } catch (Exception e) {
-                throw new RuntimeException("Could not download: " + url);
-            } finally {
-                closeQuietly(fos);
-            }
-        }
-    }
-
-    private static void unzip(String zipFile, File folder) {
-        byte[] buffer = new byte[1024];
-        File file = newFile(zipFile);
-        ZipInputStream zis = null;
-        try {
-            zis = new ZipInputStream(new FileInputStream(file));
-            ZipEntry ze = zis.getNextEntry();
-
-            FileOutputStream fos = null;
-            while (ze != null) {
-                try {
-                    String fileName = ze.getName();
-                    File newFile = new File(folder, fileName);
-
-                    // create all non exists folders else you will hit FileNotFoundException for compressed folder
-                    ensureExistingDirectory(newFile.getParent());
-
-                    if (ze.isDirectory()) {
-                        ensureExistingDirectory(newFile);
-                    } else {
-                        fos = new FileOutputStream(newFile);
-                        int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            fos.write(buffer, 0, len);
-                        }
-                    }
-                } finally {
-                    closeQuietly(fos);
-                }
-                ze = zis.getNextEntry();
-            }
-
-            zis.closeEntry();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            closeQuietly(zis);
-        }
-    }
-
-    private static void makeScriptFilesExecutable() {
-        String chmodCommand = format("chmod +x %s%shazelcast-simulator-%s%sbin%s",
-                TARGET_DIRECTORY, File.separator, SIMULATOR_VERSION, File.separator, File.separator);
-        execute(chmodCommand + ".*");
-        execute(chmodCommand + "*");
     }
 
     private static String createRunScript() {
@@ -560,14 +506,17 @@ public class SimulatorAPI {
 
     private static String createHazelcastConfig() {
         InputStream in = null;
-        String configFilename = "hazelcast.xml";
-        String defaultConfigFilename = "simulator-hazelcast-default.xml";
-        if ((in = loadFromWorkingDirectory(configFilename)) != null
-                || (in = loadFromClasspath(configFilename)) != null
-                || (in = loadDefaultFromClasspath(defaultConfigFilename)) != null) {
-            return readFrom(in);
+        try {
+            String configFilename = "hazelcast.xml";
+            String defaultConfigFilename = "simulator-hazelcast-default.xml";
+            if ((in = loadFromWorkingDirectory(configFilename)) != null
+                    || (in = loadFromClasspath(configFilename)) != null
+                    || (in = loadDefaultFromClasspath(defaultConfigFilename)) != null) {
+                return readFrom(in);
+            }
+        } finally {
+            closeQuietly(in);
         }
-
         return null;
     }
 
@@ -602,7 +551,6 @@ public class SimulatorAPI {
         if (!file.exists()) {
             return null;
         }
-
         try {
             return new FileInputStream(file);
         } catch (FileNotFoundException e) {
@@ -613,5 +561,4 @@ public class SimulatorAPI {
     private static InputStream loadDefaultFromClasspath(String defaultFilename) {
         return Config.class.getClassLoader().getResourceAsStream(defaultFilename);
     }
-
 }
