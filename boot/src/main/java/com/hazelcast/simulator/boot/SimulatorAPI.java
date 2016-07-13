@@ -1,5 +1,7 @@
 package com.hazelcast.simulator.boot;
 
+import com.hazelcast.config.Config;
+import com.hazelcast.simulator.cluster.WorkerConfigurationConverter;
 import com.hazelcast.simulator.common.SimulatorProperties;
 import com.hazelcast.simulator.coordinator.ClusterLayoutParameters;
 import com.hazelcast.simulator.coordinator.Coordinator;
@@ -18,11 +20,7 @@ import com.hazelcast.simulator.utils.jars.HazelcastJARs;
 import org.apache.commons.io.IOUtils;
 import org.jclouds.compute.ComputeService;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -170,7 +168,7 @@ public class SimulatorAPI {
         jar.closeEntry();
 
         // try to copy anonymous inner classes
-        tryToCopyAnonymousInnerClasses(existingDirectories, jar, declaredClass, transformedName);
+//        tryToCopyAnonymousInnerClasses(existingDirectories, jar, declaredClass, transformedName);
     }
 
     private static void tryToCopyAnonymousInnerClasses(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass,
@@ -555,143 +553,59 @@ public class SimulatorAPI {
     }
 
     private static String createHazelcastConfig() {
-        return "<hazelcast xsi:schemaLocation=\"http://www.hazelcast.com/schema/config\n" +
-                "                               http://www.hazelcast.com/schema/config/hazelcast-config-3.6.xsd\"\n" +
-                "           xmlns=\"http://www.hazelcast.com/schema/config\"\n" +
-                "           xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                "\n" +
-                "    <group>\n" +
-                "        <name>workers</name>\n" +
-                "    </group>\n" +
-                "\n" +
-                "    <network>\n" +
-                "        <port port-count=\"200\" auto-increment=\"true\">5701</port>\n" +
-                "        <join>\n" +
-                "            <multicast enabled=\"false\"/>\n" +
-                "            <tcp-ip enabled=\"true\">\n" +
-                "                <!--MEMBERS-->\n" +
-                "            </tcp-ip>\n" +
-                "        </join>\n" +
-                "    </network>\n" +
-                "\n" +
-                "    <properties>\n" +
-                "        <property name=\"hazelcast.phone.home.enabled\">false</property>\n" +
-                "    </properties>\n" +
-                "\n" +
-                "    <!--LICENSE-KEY-->\n" +
-                "\n" +
-                "    <!--MANAGEMENT_CENTER_CONFIG-->\n" +
-                "\n" +
-                "    <map name=\"MapStore*\">\n" +
-                "        <map-store enabled=\"true\">\n" +
-                "            <class-name>com.hazelcast.simulator.tests.map.helpers.MapStoreWithCounter</class-name>\n" +
-                "            <write-delay-seconds>5</write-delay-seconds>\n" +
-                "        </map-store>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"MapEvictAndStore*\">\n" +
-                "        <map-store enabled=\"true\">\n" +
-                "            <class-name>com.hazelcast.simulator.tests.map.helpers.MapStoreWithCounterPerKey</class-name>\n" +
-                "            <write-delay-seconds>5</write-delay-seconds>\n" +
-                "            <write-coalescing>false</write-coalescing>\n" +
-                "        </map-store>\n" +
-                "        <time-to-live-seconds>10</time-to-live-seconds>\n" +
-                "        <max-size policy=\"PER_NODE\">5000</max-size>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"MapMaxSize*\">\n" +
-                "        <eviction-policy>LRU</eviction-policy>\n" +
-                "        <max-size policy=\"PER_NODE\">1000</max-size>\n" +
-                "        <eviction-percentage>25</eviction-percentage>\n" +
-                "        <min-eviction-check-millis>0</min-eviction-check-millis>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"NoBackup*\">\n" +
-                "        <statistics-enabled>false</statistics-enabled>\n" +
-                "        <backup-count>0</backup-count>\n" +
-                "        <async-backup-count>0</async-backup-count>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"ObjectMap*\">\n" +
-                "        <in-memory-format>OBJECT</in-memory-format>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"SerializationStrategyTest*\">\n" +
-                "        <in-memory-format>BINARY</in-memory-format>\n" +
-                "        <indexes>\n" +
-                "            <index ordered=\"false\">stringVal</index>\n" +
-                "        </indexes>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"ExtractorMapTest*\">\n" +
-                "        <attributes>\n" +
-                "            <attribute extractor=\"com.hazelcast.simulator.tests.map.ExtractorMapTest$PayloadExtractor\">\n" +
-                "                payloadFromExtractor\n" +
-                "            </attribute>\n" +
-                "        </attributes>\n" +
-                "    </map>\n" +
-                "\n" +
-                "    <map name=\"PortableExtractorMapTest*\">\n" +
-                "        <attributes>\n" +
-                "            <attribute extractor=\"com.hazelcast.simulator.tests.map.ExtractorMapTest$PayloadPortableExtractor\">\n" +
-                "                payloadFromExtractor\n" +
-                "            </attribute>\n" +
-                "        </attributes>\n" +
-                "    </map>\n" +
-                "\n" +
-                "\n" +
-                "    <serialization>\n" +
-                "        <portable-version>1</portable-version>\n" +
-                "\n" +
-                "        <data-serializable-factories>\n" +
-                "            <data-serializable-factory factory-id=\"2000\">\n" +
-                "                com.hazelcast.simulator.tests.synthetic.SyntheticSerializableFactory\n" +
-                "            </data-serializable-factory>\n" +
-                "            <data-serializable-factory factory-id=\"3000\">\n" +
-                "                com.hazelcast.simulator.tests.syntheticmap.SyntheticMapSerializableFactory\n" +
-                "            </data-serializable-factory>\n" +
-                "            <data-serializable-factory factory-id=\"4000\">\n" +
-                "                com.hazelcast.simulator.tests.map.domain.IdentifiedDataSerializableObjectFactory\n" +
-                "            </data-serializable-factory>\n" +
-                "        </data-serializable-factories>\n" +
-                "\n" +
-                "        <portable-factories>\n" +
-                "            <portable-factory factory-id=\"10000001\">\n" +
-                "                com.hazelcast.simulator.tests.map.domain.PortableObjectFactory\n" +
-                "            </portable-factory>\n" +
-                "            <portable-factory factory-id=\"10000002\">\n" +
-                "                com.hazelcast.simulator.tests.map.helpers.ComplexDomainObjectPortableFactory\n" +
-                "            </portable-factory>\n" +
-                "            <portable-factory factory-id=\"5000\">\n" +
-                "                com.hazelcast.simulator.tests.map.ExtractorMapTest$SillySequencePortableFactory\n" +
-                "            </portable-factory>\n" +
-                "            <portable-factory factory-id=\"5001\">\n" +
-                "                com.hazelcast.simulator.tests.map.MultiValueMapTest$SillySequencePortableFactory\n" +
-                "            </portable-factory>\n" +
-                "        </portable-factories>\n" +
-                "    </serialization>\n" +
-                "\n" +
-                "    <services>\n" +
-                "        <service enabled=\"true\">\n" +
-                "            <name>hz:impl:syntheticMapService</name>\n" +
-                "            <class-name>com.hazelcast.simulator.tests.syntheticmap.SyntheticMapService</class-name>\n" +
-                "        </service>\n" +
-                "    </services>\n" +
-                "\n" +
-                "    <cache name=\"*\">\n" +
-                "    </cache>\n" +
-                "\n" +
-                "    <cache name=\"maxCachSmall*\">\n" +
-                "        <eviction max-size-policy=\"ENTRY_COUNT\" size=\"271\" eviction-policy=\"LFU\"/>\n" +
-                "    </cache>\n" +
-                "\n" +
-                "    <cache name=\"maxCachMedium*\">\n" +
-                "        <eviction max-size-policy=\"ENTRY_COUNT\" size=\"1000\" eviction-policy=\"LFU\"/>\n" +
-                "    </cache>\n" +
-                "\n" +
-                "    <cache name=\"maxCachLarge*\">\n" +
-                "        <eviction max-size-policy=\"ENTRY_COUNT\" size=\"10000\" eviction-policy=\"LFU\"/>\n" +
-                "    </cache>\n" +
-                "</hazelcast>\n";
+        InputStream in = null;
+        String configFilename = "hazelcast.xml";
+        String defaultConfigFilename = "simulator-hazelcast-default.xml";
+        if ((in = loadFromWorkingDirectory(configFilename)) != null
+                || (in = loadFromClasspath(configFilename)) != null
+                || (in = loadDefaultFromClasspath(defaultConfigFilename)) != null) {
+            return readFrom(in);
+        }
+
+        return null;
     }
+
+    private static String readFrom(InputStream inputStream) {
+        StringBuilder stringBuilder = new StringBuilder();
+        try {
+            int content;
+            while ((content = inputStream.read()) != -1) {
+                stringBuilder.append((char) content);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            closeQuietly(inputStream);
+        }
+
+        return stringBuilder.toString();
+    }
+
+    private static InputStream loadFromClasspath(String filename) {
+        URL url = Config.class.getClassLoader().getResource(filename);
+        if (url == null) {
+            return null;
+        }
+
+        return Config.class.getClassLoader().getResourceAsStream(filename);
+    }
+
+    private static InputStream loadFromWorkingDirectory(String filename) {
+        File file = new File(filename);
+        if (!file.exists()) {
+            return null;
+        }
+
+        try {
+            return new FileInputStream(file);
+        } catch (FileNotFoundException e) {
+            return null;
+        }
+    }
+
+    private static InputStream loadDefaultFromClasspath(String defaultFilename) {
+        return Config.class.getClassLoader().getResourceAsStream(defaultFilename);
+    }
+
 }
