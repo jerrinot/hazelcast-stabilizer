@@ -172,7 +172,7 @@ public final class Coordinator {
         echoLocal("Performance monitor enabled: %s (%d seconds)", performanceEnabled, performanceIntervalSeconds);
     }
 
-    void run() {
+    public void run() {
         try {
             checkInstallation(bash, simulatorProperties, componentRegistry);
             uploadFiles();

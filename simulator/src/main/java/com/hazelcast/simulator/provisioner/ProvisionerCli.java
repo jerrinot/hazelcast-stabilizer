@@ -15,7 +15,9 @@
  */
 package com.hazelcast.simulator.provisioner;
 
+import com.hazelcast.simulator.common.AgentsFile;
 import com.hazelcast.simulator.common.SimulatorProperties;
+import com.hazelcast.simulator.protocol.registry.ComponentRegistry;
 import com.hazelcast.simulator.utils.Bash;
 import com.hazelcast.simulator.utils.jars.HazelcastJARs;
 import joptsimple.OptionParser;
@@ -23,10 +25,13 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import org.jclouds.compute.ComputeService;
 
+import java.io.File;
+
 import static com.hazelcast.simulator.common.SimulatorProperties.PROPERTIES_FILE_NAME;
 import static com.hazelcast.simulator.utils.CliUtils.initOptionsWithHelp;
 import static com.hazelcast.simulator.utils.CliUtils.printHelpAndExit;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.isCloudProvider;
+import static com.hazelcast.simulator.utils.SimulatorUtils.loadComponentRegister;
 import static com.hazelcast.simulator.utils.SimulatorUtils.loadSimulatorProperties;
 import static com.hazelcast.simulator.utils.jars.HazelcastJARs.isPrepareRequired;
 import static java.util.Collections.singleton;
@@ -91,7 +96,8 @@ final class ProvisionerCli {
             }
         }
 
-        return new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled);
+        ComponentRegistry componentRegistry = loadComponentRegister(new File(AgentsFile.NAME), false);
+        return new Provisioner(properties, computeService, bash, hazelcastJARs, enterpriseEnabled, componentRegistry);
     }
 
     static void run(String[] args, Provisioner provisioner) {

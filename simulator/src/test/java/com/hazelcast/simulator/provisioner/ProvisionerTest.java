@@ -1,6 +1,8 @@
 package com.hazelcast.simulator.provisioner;
 
+import com.hazelcast.simulator.common.AgentsFile;
 import com.hazelcast.simulator.common.SimulatorProperties;
+import com.hazelcast.simulator.protocol.registry.ComponentRegistry;
 import com.hazelcast.simulator.utils.Bash;
 import com.hazelcast.simulator.utils.CloudProviderUtils;
 import com.hazelcast.simulator.utils.CommandLineExitException;
@@ -11,6 +13,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Set;
 
 import static com.hazelcast.simulator.TestEnvironmentUtils.createAgentsFileWithLocalhost;
@@ -19,6 +22,7 @@ import static com.hazelcast.simulator.TestEnvironmentUtils.deleteAgentsFile;
 import static com.hazelcast.simulator.TestEnvironmentUtils.deleteCloudCredentialFiles;
 import static com.hazelcast.simulator.TestEnvironmentUtils.resetUserDir;
 import static com.hazelcast.simulator.TestEnvironmentUtils.setDistributionUserDir;
+import static com.hazelcast.simulator.utils.SimulatorUtils.loadComponentRegister;
 import static java.util.Collections.singleton;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -48,7 +52,8 @@ public class ProvisionerTest extends AbstractComputeServiceTest {
         bash = mock(Bash.class);
         HazelcastJARs hazelcastJars = mock(HazelcastJARs.class);
 
-        provisioner = new Provisioner(properties, computeService, bash, hazelcastJars, false, 0);
+        ComponentRegistry componentRegistry = loadComponentRegister(new File(AgentsFile.NAME), false);
+        provisioner = new Provisioner(properties, computeService, bash, hazelcastJars, false, componentRegistry, 0);
     }
 
     @After
