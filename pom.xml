@@ -98,6 +98,7 @@
 
     <modules>
         <module>archetype</module>
+        <module>boot</module>
         <module>dist</module>
         <module>simulator</module>
         <module>tests</module>
