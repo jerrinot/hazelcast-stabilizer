@@ -33,6 +33,8 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static com.hazelcast.simulator.coordinator.WorkerParameters.initClientHzConfig;
+import static com.hazelcast.simulator.coordinator.WorkerParameters.initMemberHzConfig;
 import static com.hazelcast.simulator.test.TestPhase.GLOBAL_WARMUP;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.PROVIDER_EC2;
 import static com.hazelcast.simulator.utils.CloudProviderUtils.PROVIDER_STATIC;
@@ -206,8 +208,8 @@ public class SimulatorAPI {
         int targetCount = 0;
         TestPhase lastTestPhaseToSync = GLOBAL_WARMUP;
         int workerVmStartupDelayMs = 5000;
-        CoordinatorParameters coordinatorParameters = new CoordinatorParameters(properties, workerClassPath, uploadHazelcastJARs,
-                enterpriseEnabled, verifyEnabled, parallel, refreshJvm,
+        CoordinatorParameters coordinatorParameters = new CoordinatorParameters(properties, workerClassPath,
+                uploadHazelcastJARs, enterpriseEnabled, verifyEnabled, parallel, refreshJvm,
                 targetType, targetCount, lastTestPhaseToSync, workerVmStartupDelayMs);
 
         boolean autoCreateHzInstance = true;
@@ -215,24 +217,23 @@ public class SimulatorAPI {
         String memberJvmOptions = "";
         String clientJvmOptions = "";
         String memberHzConfig = createHazelcastConfig();
-
         String clientHzConfig = createClientHazelcastConfig();
         String log4jConfig = createLog4JConfig();
         String workerScript = createRunScript();
         boolean monitorPerformance = true;
+        int defaultHzPort = 5701;
+        String licenseKey = "";
+
         WorkerParameters workerParameters = new WorkerParameters(properties,
                 autoCreateHzInstance,
                 workerStartupTimeout,
                 memberJvmOptions,
                 clientJvmOptions,
-                memberHzConfig,
-                clientHzConfig,
+                initMemberHzConfig(memberHzConfig, componentRegistry, defaultHzPort, licenseKey, properties),
+                initClientHzConfig(clientHzConfig, componentRegistry, defaultHzPort, licenseKey),
                 log4jConfig,
                 workerScript,
                 monitorPerformance);
-
-        int defaultHzPort = 5701;
-        String licenseKey = "";
 
         WorkerConfigurationConverter workerConfigurationConverter = new WorkerConfigurationConverter(defaultHzPort,
                 licenseKey, workerParameters,
