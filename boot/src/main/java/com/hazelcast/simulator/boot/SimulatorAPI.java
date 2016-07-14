@@ -14,6 +14,7 @@ import com.hazelcast.simulator.test.TestCase;
 import com.hazelcast.simulator.test.TestPhase;
 import com.hazelcast.simulator.test.TestSuite;
 import com.hazelcast.simulator.utils.Bash;
+import com.hazelcast.simulator.utils.CommonUtils;
 import com.hazelcast.simulator.utils.FileUtils;
 import com.hazelcast.simulator.utils.jars.HazelcastJARs;
 import org.apache.commons.io.IOUtils;
@@ -52,7 +53,7 @@ import static java.util.Collections.singleton;
 public class SimulatorAPI {
 
     private static final boolean IS_LOCAL_DIST_ZIP = true;
-    private static final String SIMULATOR_VERSION = "0.8-SNAPSHOT";
+    private static final String SIMULATOR_VERSION = CommonUtils.getSimulatorVersion();
     private static final String TARGET_DIRECTORY = "/tmp";
 
     private static final String ZIP_URL
@@ -136,17 +137,18 @@ public class SimulatorAPI {
 
     private static File createWorkerJar(Class... testClasses) {
         File workerJar;
-        Set<String> existingDirectories = new HashSet<String>();
+        Set<String> createdDirectories = new HashSet<String>();
         try {
             workerJar = File.createTempFile("simulator-boot", ".jar");
+            workerJar.deleteOnExit();
             FileOutputStream baos = new FileOutputStream(workerJar);
             JarOutputStream jar = new JarOutputStream(baos);
 
             for (Class testClass : testClasses) {
-                copyResource(existingDirectories, jar, testClass);
+                copyResource(createdDirectories, jar, testClass);
                 Class[] declaredClasses = testClass.getDeclaredClasses();
                 for (Class declaredClass : declaredClasses) {
-                    copyResource(existingDirectories, jar, declaredClass);
+                    copyResource(createdDirectories, jar, declaredClass);
                 }
 
             }
@@ -158,8 +160,7 @@ public class SimulatorAPI {
     }
 
     private static void copyResource(Set<String> existingDirectories, JarOutputStream jar, Class declaredClass) throws IOException {
-        String canonicalName = declaredClass.getName();
-        String transformedName = canonicalName.replace('.', '/');
+        String transformedName = declaredClass.getName().replace('.', '/');
         String resourceName = transformedName + ".class";
         int lastSlash = transformedName.lastIndexOf('/');
         String dir = transformedName.substring(0, lastSlash + 1);
