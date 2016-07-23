@@ -158,7 +158,7 @@ public class Provisioner {
         echoImportant("Finished installing JAVA on %d machines (%s seconds)", componentRegistry.agentCount(), elapsed);
     }
 
-    void installSimulator() {
+    public void installSimulator() {
         ensureIsRemoteSetup(properties, "install");
 
         long started = System.nanoTime();
